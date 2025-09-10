@@ -1,0 +1,95 @@
+-- LocalScript para ESP com botão (versão corrigida)
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
+-- UI Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = game:GetService("CoreGui")
+
+local Button = Instance.new("TextButton")
+Button.Size = UDim2.new(0, 180, 0, 40)
+Button.Position = UDim2.new(1, -190, 0, 10) -- Canto superior direito
+Button.AnchorPoint = Vector2.new(0, 0)
+Button.Text = "Toggle ESP Players"
+Button.BackgroundColor3 = Color3.fromRGB(220, 20, 60)
+Button.TextColor3 = Color3.fromRGB(255,255,255)
+Button.Font = Enum.Font.SourceSansBold
+Button.TextSize = 20
+Button.Parent = ScreenGui
+
+local espEnabled = false
+local highlights = {}
+
+-- Função para adicionar highlight
+local function addHighlight(character)
+    if not character or highlights[character] then return end
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = Color3.new(1, 0, 0)
+    highlight.OutlineColor = Color3.new(1, 0, 0)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0
+    highlight.Parent = character
+    highlights[character] = highlight
+end
+
+-- Função para remover highlight
+local function removeHighlight(character)
+    if highlights[character] then
+        highlights[character]:Destroy()
+        highlights[character] = nil
+    end
+end
+
+-- Loop para manter highlights atualizados em todos os jogadores
+local function updateHighlights()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            if espEnabled then
+                addHighlight(player.Character)
+            else
+                removeHighlight(player.Character)
+            end
+        end
+    end
+
+    -- Remove highlights órfãos (se alguém saiu)
+    for character, highlight in pairs(highlights) do
+        local stillExists = false
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character == character then
+                stillExists = true
+                break
+            end
+        end
+        if not stillExists then
+            removeHighlight(character)
+        end
+    end
+end
+
+-- Botão de toggle
+Button.MouseButton1Click:Connect(function()
+    espEnabled = not espEnabled
+    Button.Text = espEnabled and "ESP ON" or "ESP OFF"
+    updateHighlights()
+end)
+
+-- Atualiza constantemente enquanto ESP estiver ligado/desligado
+RunService.RenderStepped:Connect(function()
+    updateHighlights()
+end)
+
+-- Garante que ao mudar personagem (respawn, etc), o highlight se atualize rápido
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        updateHighlights()
+    end)
+end)
+
+for _, player in ipairs(Players:GetPlayers()) do
+    player.CharacterAdded:Connect(function()
+        updateHighlights()
+    end)
+end
